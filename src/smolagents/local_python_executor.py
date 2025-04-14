@@ -547,17 +547,26 @@ def evaluate_boolop(
     static_tools: Dict[str, Callable],
     custom_tools: Dict[str, Callable],
     authorized_imports: List[str],
-) -> bool:
+) -> Any:
     if isinstance(node.op, ast.And):
-        for value in node.values:
-            if not evaluate_ast(value, state, static_tools, custom_tools, authorized_imports):
-                return False
-        return True
+        # 'and' returns the first falsy value encountered, or the last value if all are truthy.
+        last_value = None
+        for value_node in node.values:
+            last_value = evaluate_ast(value_node, state, static_tools, custom_tools, authorized_imports)
+            # Check if the evaluated value is falsy in a Python context
+            if not last_value:
+                return last_value  # Return the first falsy value
+        return last_value  # All values were truthy, return the last one
+
     elif isinstance(node.op, ast.Or):
-        for value in node.values:
-            if evaluate_ast(value, state, static_tools, custom_tools, authorized_imports):
-                return True
-        return False
+        # 'or' returns the first truthy value encountered, or the last value if all are falsy.
+        last_value = None
+        for value_node in node.values:
+            last_value = evaluate_ast(value_node, state, static_tools, custom_tools, authorized_imports)
+            # Check if the evaluated value is truthy in a Python context
+            if last_value:
+                return last_value  # Return the first truthy value
+        return last_value  # All values were falsy, return the last one
 
 
 def evaluate_binop(
